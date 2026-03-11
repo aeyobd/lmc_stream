@@ -1,0 +1,10 @@
+#!/bin/bash
+#SBATCH -A durham 
+#SBATCH -p cosma5 
+#SBATCH -c 16 
+#SBATCH --mem-per-cpu 10000  
+#SBATCH -t 1:0:0
+
+export JULIA_NUM_THREADS=16
+export OMP_NUM_THREADS=16
+julia ../calc_orbits.jl
