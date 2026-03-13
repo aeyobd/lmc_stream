@@ -13,8 +13,14 @@ begin
 	using Arya
 end
 
+# ╔═╡ 594731b5-4ed8-47ef-8fb9-a202e2047163
+using PyFITS
+
 # ╔═╡ f031667d-e15f-43d7-a832-720e9b73d87c
 using GeoMakie
+
+# ╔═╡ 936dd128-bfb0-4d5c-b754-8b09a144ff07
+simname = "L2M11"
 
 # ╔═╡ 1bb94a81-b4e4-4123-8b36-f68145147471
 import CSV
@@ -28,8 +34,10 @@ import DataFrames: DataFrame, rename
 # ╔═╡ 004d2da2-6227-4cd0-ade0-ece085dc06ea
 CairoMakie.activate!(type=:png)
 
-# ╔═╡ 936dd128-bfb0-4d5c-b754-8b09a144ff07
-simname = "L2M10"
+# ╔═╡ c3a28fbc-1609-4300-b834-a8de89b53c3b
+md"""
+# Data loading
+"""
 
 # ╔═╡ adebf069-b4e6-4dd5-bfe1-56b70a06e769
 snap = Snapshot(joinpath("simulations", simname, "final_positions.hdf5"))
@@ -39,6 +47,12 @@ snap_i = Snapshot(joinpath("simulations", simname, "initial.hdf5"))
 
 # ╔═╡ 17e92b56-2d13-4460-a541-80e1e10a30f3
 pot_lmc_init = Agama.Potential(file=joinpath("simulations", simname, "potential_lmc_init.ini"))
+
+# ╔═╡ e5a3b299-bac3-4723-8f72-65bf58d21463
+sim_df = read_fits(joinpath("simulations", simname, "icrs_final_coords.fits"))
+
+# ╔═╡ 10c15d7f-cd06-4e11-9ecc-6f88aef533e0
+
 
 # ╔═╡ 4c895cf8-4904-40e5-9778-6149999b1e14
 r_i = radii(snap_i)
@@ -70,7 +84,7 @@ plot_rmax = 300
 plot_limits = ((-plot_rmax, plot_rmax), (-plot_rmax, plot_rmax), (-plot_rmax, plot_rmax))
 
 # ╔═╡ 96452520-666e-4ae9-8353-e910a9472e75
-hist(r_i, bins=100)
+hist(sim_df.r_lmc_i, bins=100)
 
 # ╔═╡ f3fff48e-3a11-4dbe-a837-4c8ae36e804c
 LilGuys.plot_xyz(snap.positions, plot=:scatter, limits=plot_limits, markersize=1, alpha=0.03, color=:black)
@@ -123,6 +137,12 @@ xi_p_lmc, eta_p_lmc = LilGuys.to_orbit_coords([c.ra for c in coords_icrs_lmc], [
 # ╔═╡ ecaa4c7c-ec85-4686-b2f0-c0814ae911b1
 xi_p, eta_p = LilGuys.to_orbit_coords([c.ra for c in coords_icrs], [c.dec for c in coords_icrs], ra0, dec0, θ_lmc)
 
+# ╔═╡ d59fe589-b2ae-4a0f-b4c7-67bc181f4714
+sim_df[!, :xi_p] = xi_p
+
+# ╔═╡ 5de7b787-9cf7-45cd-8812-e2a7aefd4e51
+sim_df[!, :eta_p] = eta_p
+
 # ╔═╡ e8b072d4-27e3-4dfc-b2ce-d55565cb2a0d
 md"""
 # Comparing against observed coordinates
@@ -169,21 +189,6 @@ let
 	scatter!(akshara_df.ra, akshara_df.dec)
 	fig
 
-end
-
-# ╔═╡ e5a3b299-bac3-4723-8f72-65bf58d21463
-sim_df = let
-	df = LilGuys.to_frame(coords_icrs)
-	df[!, :xi_p], df[!, :eta_p] = LilGuys.to_orbit_coords(df.ra, df.dec, ra0, dec0, θ_lmc)
-
-	df[!, :r_0] = r_i
-	df[!, :energy_0] = ϵ
-	df[!, :L_x] = L[1, :]
-	df[!, :L_y] = L[2, :]
-	df[!, :L_z] = L[3, :]
-	df[!, :L_0] = radii(L)
-	
-	df
 end
 
 # ╔═╡ 7edd507b-2ca9-4502-94f6-567b75c2a8ef
@@ -239,7 +244,7 @@ stream_plot(color=[c.pmra for c in coords_gsr], colorbar_label="pmra gsr / masyr
 stream_plot(color=[c.pmdec for c in coords_gsr], colorbar_label="pmdec gsr / masyr", colorrange=(-1, 1))
 
 # ╔═╡ cd631337-61fe-440b-a38e-1012aa1dd7c7
-stream_plot(color=sim_df.r_0, colorbar_label="r_i", colorrange=(0, 50))
+stream_plot(color=sim_df.r_lmc_i, colorbar_label="r_i", colorrange=(0, 50))
 
 # ╔═╡ 49f5b518-1dec-4e98-8b49-3d89e704533a
 function observable_vs_stream(ykey; ylims=(nothing, nothing),
@@ -282,17 +287,17 @@ let
 	fig = Figure()
 	ax = Axis(fig[1,1],  ylabel="L")
 
-	scatter!(sim_df.xi_p, sim_df.L_x, markersize=1, alpha=0.05)
+	scatter!(sim_df.xi_p, sim_df.L_x_lmc_i, markersize=1, alpha=0.05)
 
 
 	ax = Axis(fig[2,1], ylabel="L")
 
-	scatter!(sim_df.xi_p, sim_df.L_y, markersize=1, alpha=0.05)
+	scatter!(sim_df.xi_p, sim_df.L_y_lmc_i, markersize=1, alpha=0.05)
 
 
 	ax = Axis(fig[3,1], xlabel="xi'", ylabel="L")
 
-	scatter!(sim_df.xi_p, sim_df.L_z, markersize=1, alpha=0.05)
+	scatter!(sim_df.xi_p, sim_df.L_z_lmc_i, markersize=1, alpha=0.05)
 
 	fig
 end
@@ -408,9 +413,9 @@ let
 	all_closest = vcat(closest_particles...)
 		# stephist!(closest_particles[i].r_0, normalization=:pdf)
 	# end
-	stephist!(all_closest.r_0, bins=100, normalization=:pdf, label="near stream stars")
+	stephist!(all_closest.r_lmc_i, bins=100, normalization=:pdf, label="near stream stars")
 
-	stephist!(sim_df.r_0, bins=100, normalization=:pdf, color=:black, label="ALL")
+	stephist!(sim_df.r_lmc_i, bins=100, normalization=:pdf, color=:black, label="ALL")
 
 	axislegend()
 	fig
@@ -423,9 +428,9 @@ let
 	all_closest = vcat(closest_particles...)
 		# stephist!(closest_particles[i].r_0, normalization=:pdf)
 	# end
-	stephist!(all_closest.energy_0, bins=100, normalization=:pdf, label="near stream stars")
+	stephist!(-all_closest.energy_lmc_i, bins=100, normalization=:pdf, label="near stream stars")
 
-	stephist!(sim_df.energy_0, bins=100, normalization=:pdf, color=:black, label="ALL")
+	stephist!(-sim_df.energy_lmc_i, bins=100, normalization=:pdf, color=:black, label="ALL")
 
 	axislegend()
 	fig
@@ -434,13 +439,13 @@ end
 # ╔═╡ 40261052-1f77-45f4-b492-091db0d39740
 let 
 	fig = Figure()
-	ax = Axis(fig[1,1], xlabel="initial distance from LMC", ylabel="initial angular momentum"
+	ax = Axis(fig[1,1], xlabel="initial energy", ylabel="initial angular momentum"
 			)
 
-	scatter!(sim_df.energy_0, sim_df.L_0, markersize=1, color=:black, alpha=0.05)
+	scatter!(sim_df.energy_lmc_i, sim_df.L_lmc_i, markersize=1, color=:black, alpha=0.05)
 
 	for i in eachindex(closest_particles)
-		scatter!(closest_particles[i].energy_0, closest_particles[i].L_0, markersize=3)
+		scatter!(closest_particles[i].energy_lmc_i, closest_particles[i].L_lmc_i, markersize=3)
 	end
 
 
@@ -482,7 +487,7 @@ L_max_interp = let
 	x = LinRange(Φ_lmc(0)+0.001, -0.001, 1000)
 	L = L_max.(x)
 
-	LilGuys.lerp(x, L)
+	LilGuys.lerp(x, L * V2KMS^2)
 end
 
 # ╔═╡ f9cf4d59-2baf-42bb-91e0-a6b94a62e633
@@ -491,28 +496,28 @@ L_max(Φ_lmc(0))
 # ╔═╡ 447f6f98-4a25-4314-b320-e9bc4b8d2b3b
 let 
 	fig = Figure()
-	ax = Axis(fig[1,1], xlabel="initial distance from LMC",
+	ax = Axis(fig[1,1], xlabel="binding energy",
 			  xscale=log10,
 			)
-	scatter!(sim_df.energy_0, sim_df.L_0 ./ L_max_interp.(-sim_df.energy_0), markersize=1, color=:black, alpha=0.05)
+	scatter!(-sim_df.energy_lmc_i, sim_df.L_lmc_i ./ L_max_interp.(sim_df.energy_lmc_i), markersize=1, color=:black, alpha=0.05)
 	
 	for i in eachindex(closest_particles)
-		scatter!(closest_particles[i].energy_0, closest_particles[i].L_0 ./ L_max_interp.(-closest_particles[i].energy_0), markersize=3)
+		scatter!(-closest_particles[i].energy_lmc_i, closest_particles[i].L_lmc_i ./ L_max_interp.(closest_particles[i].energy_lmc_i), markersize=3)
 	end
 
 
 	fig
 end
 
-# ╔═╡ 17b01e69-4bea-4139-b152-fac1b5f80133
-closest_particles[1].L_0
+# ╔═╡ f3efca51-22a2-4264-b743-40c6874fc762
+sim_df.energy_lmc_i
 
 # ╔═╡ fb76a263-05ee-4030-add5-f33b5fd27084
 let
 	fig  = Figure()
 	ax = Axis(fig[1,1])
 
-	df = sim_df[sim_df.energy_0 .< 0.4, :]
+	df = sim_df[sim_df.energy_lmc_i .> -0.1*V2KMS^2, :]
 
 	scatter!(df.xi_p, df.eta_p, alpha=0.1, color=:black, markersize=1,)
 	fig
@@ -520,7 +525,7 @@ let
 end
 
 # ╔═╡ 24a8f484-e305-44c2-940d-b9d7de384216
-scatter(sim_df.r_0, sim_df.energy_0)
+scatter(sim_df.r_lmc_i, sim_df.energy_lmc_i)
 
 # ╔═╡ 975d5a0a-f8b3-467d-ba37-93bbce5fbfc0
 let
@@ -533,16 +538,20 @@ let
 end
 
 # ╔═╡ Cell order:
+# ╠═936dd128-bfb0-4d5c-b754-8b09a144ff07
 # ╠═82bc2e30-1d7a-11f1-95f6-49e0b164b4f1
+# ╠═594731b5-4ed8-47ef-8fb9-a202e2047163
 # ╠═1bb94a81-b4e4-4123-8b36-f68145147471
 # ╠═2686ab62-1711-4dcb-97b9-e4ab322497d9
 # ╠═fce610b5-cfbd-46fe-b570-4d5df7fbf5f0
 # ╠═f031667d-e15f-43d7-a832-720e9b73d87c
 # ╠═004d2da2-6227-4cd0-ade0-ece085dc06ea
-# ╠═936dd128-bfb0-4d5c-b754-8b09a144ff07
+# ╠═c3a28fbc-1609-4300-b834-a8de89b53c3b
 # ╠═adebf069-b4e6-4dd5-bfe1-56b70a06e769
 # ╠═dc75f240-e1cd-455e-b431-4c3b7ad5343d
 # ╠═17e92b56-2d13-4460-a541-80e1e10a30f3
+# ╠═e5a3b299-bac3-4723-8f72-65bf58d21463
+# ╠═10c15d7f-cd06-4e11-9ecc-6f88aef533e0
 # ╠═4c895cf8-4904-40e5-9778-6149999b1e14
 # ╠═cc028c15-ccfe-4c42-b1a7-0e86c36e7e60
 # ╠═a215ed7a-f605-4f43-b772-1e13398e6dbf
@@ -569,6 +578,8 @@ end
 # ╠═c6331833-076a-47f5-9ae3-8694969fc806
 # ╠═a72b3248-9431-4aa6-861c-ed975c6c6725
 # ╠═ecaa4c7c-ec85-4686-b2f0-c0814ae911b1
+# ╠═d59fe589-b2ae-4a0f-b4c7-67bc181f4714
+# ╠═5de7b787-9cf7-45cd-8812-e2a7aefd4e51
 # ╠═8ecf873e-8874-427e-8e6a-dd2d795ae57e
 # ╠═0664169f-6b2f-421e-a0c7-6fac34f5256b
 # ╠═a946cea1-fe5b-4522-839b-9b60924394d9
@@ -579,7 +590,6 @@ end
 # ╠═e8b072d4-27e3-4dfc-b2ce-d55565cb2a0d
 # ╠═a8ef246a-b342-4e79-b794-a61089a79f81
 # ╠═2c205f8f-9321-45dc-90fa-ff03fc4acf60
-# ╠═e5a3b299-bac3-4723-8f72-65bf58d21463
 # ╠═7edd507b-2ca9-4502-94f6-567b75c2a8ef
 # ╠═ee3f0069-31eb-4472-bec3-598c98ef6f6b
 # ╠═b1587ebb-4353-4998-a221-97009ffe2a88
@@ -591,7 +601,7 @@ end
 # ╠═c0dd1c42-8c6c-42a4-9ec6-316bb5652d4a
 # ╠═05a3d78d-571c-4bcd-ae17-aa7f6202203f
 # ╠═f71fd567-59fa-4564-9ee0-1e6bd9d580e8
-# ╠═fec39bf2-fa3c-43ca-ba89-0437791e08e5
+# ╟─fec39bf2-fa3c-43ca-ba89-0437791e08e5
 # ╠═e78858a9-0181-4e2e-a0b6-180ea728f8c6
 # ╠═4831c1d8-4782-4a62-85a4-9785b530789a
 # ╠═a59b71d9-6e7b-4915-83dd-056db44b5f15
@@ -608,7 +618,7 @@ end
 # ╠═a5735a10-72b9-4fc9-83ac-78bb5c6af259
 # ╠═f9cf4d59-2baf-42bb-91e0-a6b94a62e633
 # ╠═447f6f98-4a25-4314-b320-e9bc4b8d2b3b
-# ╠═17b01e69-4bea-4139-b152-fac1b5f80133
+# ╠═f3efca51-22a2-4264-b743-40c6874fc762
 # ╠═fb76a263-05ee-4030-add5-f33b5fd27084
 # ╠═24a8f484-e305-44c2-940d-b9d7de384216
 # ╠═975d5a0a-f8b3-467d-ba37-93bbce5fbfc0

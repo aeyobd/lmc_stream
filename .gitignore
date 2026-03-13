@@ -2,3 +2,5 @@
 *.fits
 *.hdf5
 *.out
+*.git 
+*.mp4

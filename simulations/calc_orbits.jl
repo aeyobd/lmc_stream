@@ -1,7 +1,7 @@
 using LilGuys
 using Agama
-import CSV
-using DataFrames: DataFrame
+
+include(joinpath(@__DIR__, "utils.jl"))
 
 
 function (@main)(ARGS)
@@ -24,33 +24,25 @@ function (@main)(ARGS)
 end
 
 
-function get_lmc_orbit(input)
-    lmc_file = joinpath(input, "trajlmc.txt")
-    df_lmc = lmc_traj = CSV.read(lmc_file, DataFrame, delim=" ", header = [:time, :x, :y, :z, :v_x, :v_y, :v_z], ignorerepeated=true, ntasks=1)
-
-    pos = hcat(df_lmc.x, df_lmc.y, df_lmc.z)'
-    vel = hcat(df_lmc.v_x, df_lmc.v_y, df_lmc.v_z)'
-
-    # convert to code units
-    t = df_lmc.time .* Agama.time_scale(Agama.VASILIEV_UNITS) 
-    vel .*= Agama.velocity_scale(Agama.VASILIEV_UNITS) 
-
-    orbit_lmc = Orbit(times=t, positions=pos, velocities=vel)
-end
-
 
 """
     write_orbits(output, orbits; N_max)
 
 Write the first `N_max` orbits to a file "orbits.hdf5" in `output`.
 """
-function write_orbits(orbits; N_max=100)
+function write_orbits(orbits)
     filename = "orbits.hdf5"
 
-    N_max = min(length(orbits), N_max)
-    structs = [(string(i) => orbit) for (i, orbit) in enumerate(orbits[1:N_max])]
+    println("writing orbits")
 
-    LilGuys.write_structs_to_hdf5(filename, structs)
+    positions = cat((orbit.positions for orbit in orbits)..., dims=3)
+    velocities = cat((orbit.velocities for orbit in orbits)..., dims=3)
+
+    times = orbits[1].times
+
+    orbits = Orbits(positions, velocities, times)
+
+    LilGuys.write_struct_to_hdf5(filename, orbits)
 end
 
 
