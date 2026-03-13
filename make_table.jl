@@ -32,7 +32,7 @@ import DataFrames: DataFrame, rename
 CairoMakie.activate!(type=:png)
 
 # ╔═╡ 936dd128-bfb0-4d5c-b754-8b09a144ff07
-simname = "L2M11"
+simname = "L3M11"
 
 # ╔═╡ adebf069-b4e6-4dd5-bfe1-56b70a06e769
 snap = Snapshot(joinpath("simulations", simname, "final_positions.hdf5"))
@@ -119,7 +119,7 @@ sim_df = let
 end
 
 # ╔═╡ 56ce33d6-8a1f-4606-b4b3-9ade161e4ae6
-write_fits(joinpath("simulations", simname, "icrs_final_coords.fits"), sim_df)
+write_fits(joinpath("simulations", simname, "icrs_final_coords.fits"), sim_df, overwrite=true)
 
 # ╔═╡ Cell order:
 # ╠═82bc2e30-1d7a-11f1-95f6-49e0b164b4f1

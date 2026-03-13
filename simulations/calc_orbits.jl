@@ -30,15 +30,22 @@ end
 
 Write the first `N_max` orbits to a file "orbits.hdf5" in `output`.
 """
-function write_orbits(orbits)
+function write_orbits(orbits, N_max=100_000)
     filename = "orbits.hdf5"
 
     println("writing orbits")
-
-    positions = cat((orbit.positions for orbit in orbits)..., dims=3)
-    velocities = cat((orbit.velocities for orbit in orbits)..., dims=3)
-
+    No = length(orbits)
     times = orbits[1].times
+    Nt = min(N_max, length(orbits[1].times))
+
+    positions = Array{Float64, 3}(undef, 3, Nt, No)
+    velocities = Array{Float64, 3}(undef, 3, Nt, No)
+
+
+    for i in 1:Nt
+        positions[:, :, i] = orbits[i].positions
+        velocities[:, :, i] = orbits[i].velocities
+    end
 
     orbits = Orbits(positions, velocities, times)
 

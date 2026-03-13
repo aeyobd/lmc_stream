@@ -20,7 +20,7 @@ using PyFITS
 using GeoMakie
 
 # ╔═╡ 936dd128-bfb0-4d5c-b754-8b09a144ff07
-simname = "L2M11"
+simname = "L2M10first"
 
 # ╔═╡ 1bb94a81-b4e4-4123-8b36-f68145147471
 import CSV
@@ -33,6 +33,9 @@ import DataFrames: DataFrame, rename
 
 # ╔═╡ 004d2da2-6227-4cd0-ade0-ece085dc06ea
 CairoMakie.activate!(type=:png)
+
+# ╔═╡ fb1ca697-fe64-4a51-8d39-2f0ae4e82ff0
+FIGDIR = joinpath("simulations", simname, "figures")
 
 # ╔═╡ c3a28fbc-1609-4300-b834-a8de89b53c3b
 md"""
@@ -47,12 +50,6 @@ snap_i = Snapshot(joinpath("simulations", simname, "initial.hdf5"))
 
 # ╔═╡ 17e92b56-2d13-4460-a541-80e1e10a30f3
 pot_lmc_init = Agama.Potential(file=joinpath("simulations", simname, "potential_lmc_init.ini"))
-
-# ╔═╡ e5a3b299-bac3-4723-8f72-65bf58d21463
-sim_df = read_fits(joinpath("simulations", simname, "icrs_final_coords.fits"))
-
-# ╔═╡ 10c15d7f-cd06-4e11-9ecc-6f88aef533e0
-
 
 # ╔═╡ 4c895cf8-4904-40e5-9778-6149999b1e14
 r_i = radii(snap_i)
@@ -83,11 +80,8 @@ plot_rmax = 300
 # ╔═╡ eb7ca0a8-7968-40a4-86be-6b0d8a45af55
 plot_limits = ((-plot_rmax, plot_rmax), (-plot_rmax, plot_rmax), (-plot_rmax, plot_rmax))
 
-# ╔═╡ 96452520-666e-4ae9-8353-e910a9472e75
-hist(sim_df.r_lmc_i, bins=100)
-
 # ╔═╡ f3fff48e-3a11-4dbe-a837-4c8ae36e804c
-LilGuys.plot_xyz(snap.positions, plot=:scatter, limits=plot_limits, markersize=1, alpha=0.03, color=:black)
+@savefig "final_xyz_particles" LilGuys.plot_xyz(snap.positions, plot=:scatter, limits=plot_limits, markersize=1, alpha=0.03, color=:black)
 
 # ╔═╡ 913fa16e-f951-4caf-9359-823760fa47b0
 function to_icrs(snap::Union{Snapshot, Orbit})
@@ -131,25 +125,24 @@ gsr_lmc = LilGuys.transform(GSR, icrs_lmc)
 # ╔═╡ 13b80ec1-f1b9-4dc7-bd6e-39c6390b1b99
 θ_lmc = atand(gsr_lmc.pmra, gsr_lmc.pmdec)
 
+# ╔═╡ e5a3b299-bac3-4723-8f72-65bf58d21463
+sim_df = let
+	sim_df = read_fits(joinpath("simulations", simname, "icrs_final_coords.fits"))
+	sim_df[!, :xi_p], sim_df[!, :eta_p] = LilGuys.to_orbit_coords([c.ra for c in coords_icrs], [c.dec for c in coords_icrs], ra0, dec0, θ_lmc)
+
+	sim_df
+end
+
+# ╔═╡ 96452520-666e-4ae9-8353-e910a9472e75
+hist(sim_df.r_lmc_i, bins=100)
+
 # ╔═╡ a72b3248-9431-4aa6-861c-ed975c6c6725
 xi_p_lmc, eta_p_lmc = LilGuys.to_orbit_coords([c.ra for c in coords_icrs_lmc], [c.dec for c in coords_icrs_lmc], ra0, dec0, θ_lmc)
-
-# ╔═╡ ecaa4c7c-ec85-4686-b2f0-c0814ae911b1
-xi_p, eta_p = LilGuys.to_orbit_coords([c.ra for c in coords_icrs], [c.dec for c in coords_icrs], ra0, dec0, θ_lmc)
-
-# ╔═╡ d59fe589-b2ae-4a0f-b4c7-67bc181f4714
-sim_df[!, :xi_p] = xi_p
-
-# ╔═╡ 5de7b787-9cf7-45cd-8812-e2a7aefd4e51
-sim_df[!, :eta_p] = eta_p
 
 # ╔═╡ e8b072d4-27e3-4dfc-b2ce-d55565cb2a0d
 md"""
 # Comparing against observed coordinates
 """
-
-# ╔═╡ a8ef246a-b342-4e79-b794-a61089a79f81
-
 
 # ╔═╡ 2c205f8f-9321-45dc-90fa-ff03fc4acf60
 akshara_df = let
@@ -166,7 +159,7 @@ akshara_df = let
 end
 
 # ╔═╡ a54824f1-1ae9-4b05-b508-abaef47456f6
-let 
+@savefig "final_sky_particles" let 
 	fig = Figure()
 	ax = GeoAxis(fig[1,1];
 	    dest = "+proj=hammer",
@@ -177,6 +170,8 @@ let
 	    xgridwidth=0.5,
 	    ygridwidth=0.5,
 	    valign=:center,
+		xgridcolor = (:black, 0.2),
+		ygridcolor = (:black, 0.2),
 	             
 	)
 	xlims!(-180, 180)
@@ -184,9 +179,9 @@ let
 	s = (orbit_lmc.times .- time0)/abs(time0) * 5
 	scatter!([c.ra for c in coords_icrs_lmc], [c.dec for c in coords_icrs_lmc], markersize =s, marker=:circle)
 	
-	scatter!([c.ra for c in coords_icrs], [c.dec for c in coords_icrs], markersize=1, marker=:circle, alpha=0.1)
+	scatter!([c.ra for c in coords_icrs], [c.dec for c in coords_icrs], markersize=1, marker=:circle, alpha=0.1, color=:black)
 	
-	scatter!(akshara_df.ra, akshara_df.dec)
+	scatter!(akshara_df.ra, akshara_df.dec, color=COLORS[3])
 	fig
 
 end
@@ -215,7 +210,7 @@ function stream_plot(; colorbar_label=nothing, kwargs...)
 	
 
 	
-	p = scatter!(xi_p, eta_p, markersize=1; kwargs...)
+	p = scatter!(sim_df.xi_p, sim_df.eta_p, markersize=1; kwargs...)
 
 	scatter!(akshara_xi_p, akshara_eta_p)
 
@@ -274,7 +269,13 @@ function observable_vs_stream(ykey; ylims=(nothing, nothing),
 end
 
 # ╔═╡ 447b6b59-ca3d-40ff-9037-272b3ef5b0e1
-observable_vs_stream(:eta_p, ylims=(-40, 40))
+@savefig "stream_xi_eta_p" let
+	fig = observable_vs_stream(:eta_p, ylims=(-40, 40))
+
+	fig.content[1].aspect = DataAspect()
+
+	fig
+end
 
 # ╔═╡ 922830a7-736d-4d49-9a83-247d3722ad95
 hist(sim_df.xi_p, bins=300, normalization=:pdf, axis=(
@@ -303,16 +304,16 @@ let
 end
 
 # ╔═╡ d4c2bb50-77f3-44ef-8f0b-8126964a2f70
-observable_vs_stream(:pmra, ylims=(-1, 4))
+@savefig "stream_pmra" observable_vs_stream(:pmra, ylims=(-1, 4))
 
 # ╔═╡ c0dd1c42-8c6c-42a4-9ec6-316bb5652d4a
-observable_vs_stream(:pmdec, ylims=(-5, 5))
+@savefig "stream_pmdec" observable_vs_stream(:pmdec, ylims=(-5, 5))
 
 # ╔═╡ 05a3d78d-571c-4bcd-ae17-aa7f6202203f
-observable_vs_stream(:radial_velocity)
+@savefig "stream_radial_velocity" observable_vs_stream(:radial_velocity)
 
 # ╔═╡ f71fd567-59fa-4564-9ee0-1e6bd9d580e8
-observable_vs_stream(:distance, ylims=(0, 200))
+@savefig "stream_distance" observable_vs_stream(:distance, ylims=(0, 200))
 
 # ╔═╡ fec39bf2-fa3c-43ca-ba89-0437791e08e5
 md"""
@@ -405,6 +406,9 @@ let
 end
 	
 	
+
+# ╔═╡ 2a8f9a5a-9bec-4f17-afa1-4f37ab632c52
+hist(sim_df.distance)
 
 # ╔═╡ a42ef1a5-3305-4ed6-a843-c58b213af617
 let 
@@ -546,12 +550,12 @@ end
 # ╠═fce610b5-cfbd-46fe-b570-4d5df7fbf5f0
 # ╠═f031667d-e15f-43d7-a832-720e9b73d87c
 # ╠═004d2da2-6227-4cd0-ade0-ece085dc06ea
+# ╠═fb1ca697-fe64-4a51-8d39-2f0ae4e82ff0
 # ╠═c3a28fbc-1609-4300-b834-a8de89b53c3b
 # ╠═adebf069-b4e6-4dd5-bfe1-56b70a06e769
 # ╠═dc75f240-e1cd-455e-b431-4c3b7ad5343d
 # ╠═17e92b56-2d13-4460-a541-80e1e10a30f3
 # ╠═e5a3b299-bac3-4723-8f72-65bf58d21463
-# ╠═10c15d7f-cd06-4e11-9ecc-6f88aef533e0
 # ╠═4c895cf8-4904-40e5-9778-6149999b1e14
 # ╠═cc028c15-ccfe-4c42-b1a7-0e86c36e7e60
 # ╠═a215ed7a-f605-4f43-b772-1e13398e6dbf
@@ -577,9 +581,6 @@ end
 # ╠═98507ade-ed3e-40b0-991f-b0dcba5c232d
 # ╠═c6331833-076a-47f5-9ae3-8694969fc806
 # ╠═a72b3248-9431-4aa6-861c-ed975c6c6725
-# ╠═ecaa4c7c-ec85-4686-b2f0-c0814ae911b1
-# ╠═d59fe589-b2ae-4a0f-b4c7-67bc181f4714
-# ╠═5de7b787-9cf7-45cd-8812-e2a7aefd4e51
 # ╠═8ecf873e-8874-427e-8e6a-dd2d795ae57e
 # ╠═0664169f-6b2f-421e-a0c7-6fac34f5256b
 # ╠═a946cea1-fe5b-4522-839b-9b60924394d9
@@ -588,7 +589,6 @@ end
 # ╠═038bc3d9-ee0f-454e-88c8-7ece8da76cc6
 # ╠═cd631337-61fe-440b-a38e-1012aa1dd7c7
 # ╠═e8b072d4-27e3-4dfc-b2ce-d55565cb2a0d
-# ╠═a8ef246a-b342-4e79-b794-a61089a79f81
 # ╠═2c205f8f-9321-45dc-90fa-ff03fc4acf60
 # ╠═7edd507b-2ca9-4502-94f6-567b75c2a8ef
 # ╠═ee3f0069-31eb-4472-bec3-598c98ef6f6b
@@ -610,6 +610,7 @@ end
 # ╠═ab4b578f-37db-4958-859b-807ff0025670
 # ╠═05b8a2d5-eaf2-458b-aef2-e7d1bec1f3ad
 # ╠═bf89fb53-e16f-4f84-adfd-75f6586f2795
+# ╠═2a8f9a5a-9bec-4f17-afa1-4f37ab632c52
 # ╠═a42ef1a5-3305-4ed6-a843-c58b213af617
 # ╠═24c627f0-bab4-409d-b1e0-b6c08ea1dee1
 # ╠═40261052-1f77-45f4-b492-091db0d39740

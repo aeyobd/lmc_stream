@@ -39,7 +39,7 @@ md"""
 """
 
 # ╔═╡ be2c76d4-fb9d-4d1e-a9ea-7370c824e84a
-simname = "L3M11"
+simname = "L2M10first"
 
 # ╔═╡ d8dd1e3c-6587-4282-856a-88ca22575f92
 orbits = LilGuys.read_struct_from_hdf5(joinpath("simulations", simname, "orbits.hdf5"), Utils.Orbits)
@@ -59,6 +59,28 @@ Nt = length(times)
 # ╔═╡ c9a10db6-fe27-47b6-aa48-98777b250b70
 function dist_to_size(dist)
 	return (dist / 50)^-1
+end
+
+# ╔═╡ e0ce9870-0fc3-4e3b-add2-ad02bd6efd3b
+let 
+	fig = Figure()
+	ax = GeoAxis(fig[1,1];
+	    dest = "+proj=hammer",
+	    limits = (0., 360, -90, 90),
+	    yticklabelsvisible=false,
+	    xticklabelsvisible=false,
+	    yticklabelsize=8,
+	    xgridwidth=0.3,
+	    ygridwidth=0.3,
+		xgridcolor = (:black, 0.2),
+		ygridcolor = (:black, 0.2),
+	    valign=:center,
+	             
+	)
+	xlims!(-180, 180)
+
+	fig
+
 end
 
 # ╔═╡ b56933d3-3ac8-4272-bc2f-a83537ef2ab7
@@ -104,6 +126,12 @@ end
 # ╔═╡ bb2334c4-af8a-41a2-9d12-36d5286f77b6
 scatter(get_positions(5)[1:2]...)
 
+# ╔═╡ 769a3a7e-531a-48e9-b113-97ac45754440
+idxs_wrong = get_positions(length(times))[end] .== 8.122
+
+# ╔═╡ 4ed63804-53b1-40d0-84d9-69711cd8469d
+get_positions(1)[end][idxs_wrong]
+
 # ╔═╡ 5b90e09b-6df6-4b2f-8e0f-7f7e45ddeae2
 let 
 	fig = Figure()
@@ -135,7 +163,7 @@ let
 	y_lmc = Observable(y)
 	s_lmc = Observable(lmc_size_scale*dist_to_size.(dist))
 
-	scatter!(x_obs, y_obs, color=:black, markersize=s_obs, alpha=1)
+	scatter!(x_obs, y_obs, color=:black, markersize=s_obs, alpha=0.05)
 
 	scatter!(x_lmc, y_lmc, color=COLORS[3], marker=:circle, markersize=s_lmc)
 
@@ -179,6 +207,9 @@ end
 # ╠═597099e1-ca84-457e-bbdd-11600d134fcb
 # ╠═38797249-6d71-4476-9a72-691f0125f88d
 # ╠═c9a10db6-fe27-47b6-aa48-98777b250b70
+# ╠═e0ce9870-0fc3-4e3b-add2-ad02bd6efd3b
+# ╠═769a3a7e-531a-48e9-b113-97ac45754440
+# ╠═4ed63804-53b1-40d0-84d9-69711cd8469d
 # ╠═5b90e09b-6df6-4b2f-8e0f-7f7e45ddeae2
 # ╠═b56933d3-3ac8-4272-bc2f-a83537ef2ab7
 # ╠═81366c68-2390-4475-b59b-eb527b90f217

@@ -1,6 +1,11 @@
 .ipynb_checkpoints
+
+*.png
+*.pdf
+
 *.fits
 *.hdf5
 *.out
 *.git 
 *.mp4
+*.tar.gz
